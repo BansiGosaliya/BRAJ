@@ -1,0 +1,202 @@
+#include<LiquidCrystal.h>
+#include <SoftwareSerial.h>
+SoftwareSerial mySerial(9,10); //gsm tx,rx
+LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+
+#include <TinyGPS.h>
+long lat,lon; // create variable for latitude and longitude object 
+SoftwareSerial gpsSerial(13,8); // create gps sensor connection
+TinyGPS gps; // create gps object
+
+String latitude="No Range      ";
+String longitude="No Range     ";
+int temp=0,i;  
+boolean gps_status=0;
+int t = 13;
+int e = 8;
+void setup() 
+{ pinMode (t,INPUT);
+  pinMode (e,OUTPUT);
+
+  lcd.begin(16,2);
+   mySerial.begin(9600);
+  Serial.begin(9600);
+   delay(100);
+  gpsSerial.begin(9600);
+  lcd.print("Intialization");
+  delay(2000);   
+  lcd.print("Vehicle Tracking");
+  lcd.setCursor(0,1);
+  lcd.print("    System      ");
+  delay(2000);
+  gsm_init();
+  lcd.clear();
+  Serial.println("AT+CNMI=2,2,0,0,0");
+  lcd.print("GPS Initializing");
+  lcd.setCursor(0,1);
+  lcd.print("  No GPS Range  ");
+  get_gps();
+  delay(2000);
+  lcd.clear();
+  lcd.print("GPS Range Found");
+  lcd.setCursor(0,1);
+  lcd.print("GPS is Ready");
+  delay(2000);
+  lcd.clear();
+  lcd.print("System Ready");
+  temp=0;
+
+  int t,e;
+}
+void loop()
+{
+  serialEvent();
+  if(temp)
+  {
+    get_gps();
+    user_mode();
+    tracking();
+
+  }
+}
+void  get_gps()
+{  
+while(gpsSerial.available())  
+    {
+      if(gps.encode(gpsSerial.read()))
+       {
+         gps.get_position(&lat,&lon);
+         Serial.print("position:");
+         Serial.print("lat:");
+         Serial.print(lat);
+         Serial.print("");
+          Serial.print("\nlon:");
+          Serial.print(lon);
+          long lcd_disply();
+        }
+    }
+  }
+  void lcd_disply()
+    
+   { 
+    lcd.setCursor(0,1);
+    lcd.print("Lat:");
+    lcd.print(lat);
+    lcd.setCursor(0,1);
+    lcd.print("Lon:");
+    lcd.print(lon);
+    
+    delay(2000);
+    }
+    void serialEvent()
+{
+  while(Serial.available())
+  {
+    if(Serial.find("Track Vehicle"))
+    {
+      temp=1;
+    }
+     if (Serial.available()>0)
+     switch(Serial.read())
+  {
+    case 's':
+  char SendMessage();
+      break;
+    case 'r':
+char RecieveMessage();
+      break;
+  }
+
+ if (mySerial.available()>0)
+   Serial.write(mySerial.read());
+  }}
+
+
+
+ void SendMessage()
+{
+  mySerial.println("AT+CMGF=1");    //Sets the GSM Module in Text Mode
+  delay(1000);  // Delay of 1000 milli seconds or 1 second
+  mySerial.println("AT+CMGS=\"+917016804495\"\r"); // Replace x with mobile number
+  delay(1000);
+  mySerial.println("Your Vehicle Current Location is:");
+  delay(1000);
+  mySerial.println(lat);// The SMS text you want to send
+  delay(100);
+   mySerial.println(lon);// The SMS text you want to send
+  delay(100);
+   mySerial.println((char)26);// ASCII code of CTRL+Z
+  delay(1000);
+}
+
+
+ void RecieveMessage()
+{
+  mySerial.println("AT+CNMI=2,2,0,0,0"); // AT Command to receive a live SMS
+  delay(1000);
+  }
+
+void user_mode()
+{
+  if(t==1)
+  { 
+    digitalWrite(e,HIGH);
+      tracking();
+  }
+  else
+  digitalWrite(e,LOW);
+}
+void gsm_init()
+{
+  lcd.clear();
+  lcd.print("Finding Module..");
+  boolean at_flag=1;
+  while(at_flag)
+  {
+    Serial.println("AT");
+    while(Serial.available()>0)
+    {
+      if(Serial.find("OK"))
+      at_flag=0;
+    }
+    
+    delay(1000);
+  }
+  lcd.clear();
+  lcd.print("Module Connected..");
+  delay(1000);
+  lcd.clear();
+  lcd.print("Disabling ECHO");
+  boolean echo_flag=1;
+  while(echo_flag)
+  {
+    Serial.println("ATE0");
+    while(Serial.available()>0)
+    {
+      if(Serial.find("OK"))
+      echo_flag=0;
+    }
+    delay(1000);
+  }
+  lcd.clear();
+  lcd.print("Echo OFF");
+  delay(1000);
+  lcd.clear();
+  lcd.print("Finding Network..");
+  boolean net_flag=1;
+  while(net_flag)
+  {
+    Serial.println("AT+CPIN?");
+    while(Serial.available()>0)
+    {
+      if(Serial.find("+CPIN: READY"))
+      net_flag=0;
+    }
+    delay(1000);
+  }
+  lcd.clear();
+  lcd.print("Network Found..");
+
+  delay(1000);
+  lcd.clear();
+}
